@@ -1,8 +1,6 @@
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 from torch.multiprocessing import Pool, set_start_method
 from datetime import datetime
-import pandas as pd
-import sqlite3
 
 set_start_method("spawn", force=True)
 
@@ -40,8 +38,8 @@ def process(df):
     df.dropna(inplace=True, how='any')
 
     core_count = 10
-    len_df_rev = int(len(df) / core_count)
-    df_frames = [df.iloc[i * len_df_rev:(i + 1) * len_df_rev].copy() for i in range(core_count + 1)]
+    len_df = int(len(df) / core_count)
+    df_frames = [df.iloc[i * len_df:(i + 1) * len_df].copy() for i in range(core_count + 1)]
 
     start = datetime.now()
     multi_pool = Pool(processes=core_count)
