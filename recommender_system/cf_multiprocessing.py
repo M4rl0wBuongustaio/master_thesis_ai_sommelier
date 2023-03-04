@@ -47,8 +47,8 @@ def get_n_predictions(input_user: int, similar_users: list, reviews: pd.DataFram
             ]
         for wine in unrated_wines.wine_id:
             if wine not in wine_prediction:
-                wine_prediction[wine] = round((input_user_avg_rating + (
-                        unrated_wines.loc[unrated_wines.wine_id == wine].rating.iloc[0] - user_avg_rating)) * 2) / 2
+                wine_prediction[wine] = np.round((input_user_avg_rating + (
+                        unrated_wines.loc[unrated_wines.wine_id == wine].rating.iloc[0] - user_avg_rating)), decimals=1)
     return {key: val for key, val in wine_prediction.items() if val >= threshold}
 
 
