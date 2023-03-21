@@ -2,7 +2,7 @@ from sentence_transformers import SentenceTransformer, util
 from torch.multiprocessing import set_start_method
 import pandas as pd
 import numpy as np
-import torch
+from torch import has_mps
 
 set_start_method("spawn", force=True)
 
@@ -13,7 +13,7 @@ def get_embedder(path: str):
     global EM
     if EM is None:
         EM = SentenceTransformer.load(path)
-    if torch.has_mps:
+    if has_mps:
         EM.to('mps')
     return EM
 
@@ -42,14 +42,15 @@ def get_n_similar_user(
     if truncate and len(candidates) > n:
         candidates = np.random.RandomState(26).choice(candidates, size=n)
 
-    input_user_notes = review_pool[review_pool['user_id'] == input_user_id]['note'].tolist()
+    input_user_notes = review_pool[review_pool['user_id'] == input_user_id].sort_values(by='wine_id')['note'].tolist()
     try:
         input_user_embedding = embedder.encode(input_user_notes, convert_to_tensor=True)
     except Exception as e:
         print(e)
 
     for candidate_id in candidates:
-        candidate_notes: list = review_pool[review_pool['user_id'] == candidate_id]['note'].tolist()
+        candidate_notes: list = review_pool[review_pool['user_id'] == candidate_id
+                                            ].sort_values(by='wine_id')['note'].tolist()
         try:
             candidate_embedding = embedder.encode(candidate_notes, convert_to_tensor=True)
         except Exception as e:
@@ -62,4 +63,4 @@ def get_n_similar_user(
     )
     similar_user.sort_values(by='similarity', ascending=False, inplace=True)
     similar_user.drop(columns='similarity', inplace=True)
-    return similar_user
+    return similar_user.head(n=n)

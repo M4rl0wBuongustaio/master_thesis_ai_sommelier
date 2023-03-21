@@ -25,9 +25,7 @@ def get_predictions(
     for target_wine in target_wines:
         sim_user_rating: float = review_pool[
             (review_pool['user_id'] == similar_user_id) & (review_pool['wine_id'] == target_wine)]['rating'].values[0]
-
-        prediction: float = np.round(
-            input_user_avg_rating + (sim_user_rating - sim_user_avg_rating), decimals=1)
+        prediction: float = (input_user_avg_rating + (sim_user_rating - sim_user_avg_rating))
 
         predictions_list.append(prediction)
         wines_list.append(target_wine)
