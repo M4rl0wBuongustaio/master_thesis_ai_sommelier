@@ -57,7 +57,7 @@ def evaluate_recommender(
             # Ensure user can be evaluated against input user.
             review_pool: pd.DataFrame = df_train[df_train['wine_id'].isin(input_user_reviews['wine_id'])]
 
-            # Reduce to input-user-reviews in training data.
+            # Reduce to input-user in training data.
             review_pool: pd.DataFrame = review_pool[review_pool['user_id'].isin(
                 df_test[df_test['wine_id'].isin(input_user_reviews_test['wine_id'])]['user_id']
             )]

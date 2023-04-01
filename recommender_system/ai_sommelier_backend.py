@@ -1,29 +1,14 @@
-from selenium.webdriver.support import expected_conditions as ec
 from sentence_transformers import SentenceTransformer, util
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium import webdriver
 from bs4 import BeautifulSoup
 import numpy as np
 import requests
 import torch
-import re
+import json
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15'
-PRICE_CLASS_NAME = 'purchaseAvailability__row--S-DoM purchaseAvailability__prices--1WNrU'
-TIMEOUT = 1
-
-options = Options()
-options.add_argument('--headless')
-options.add_argument(f'user-agent={USER_AGENT}')
-DRIVER = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 embeddings_dict: dict = torch.load(
     '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/database/test_embeddings_likes.pt')
@@ -31,81 +16,130 @@ embeddings_list: torch.tensor = torch.stack([embeddings_dict[i][1] for i in rang
 wine_id_list: list = [embeddings_dict[i][0] for i in range(len(embeddings_dict.values()))]
 del embeddings_dict
 embedder = SentenceTransformer.load(
-    '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/models/simcse_en').to('mps')
+    '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/models/simcse_en')
 
 
-def get_wine_types() -> dict:
-    grapes_dict: dict = requests.get(
-        url='https://www.vivino.com/api/grapes/',
-        headers={
-            'User-Agent': USER_AGENT
-        }
-    ).json()['grapes']
-    return {item['id']: item for item in grapes_dict}
+def get_wine_data(highlights: json, reviews: json, prices: json, html: BeautifulSoup, wine_id: int,
+                  probability: float) -> dict:
+    no_value = '*k.A.*'
 
+    if reviews['reviews'][0]['vintage']['wine']:
+        try:
+            name = reviews['reviews'][0]['vintage']['wine']['name']
+        except Exception as e:
+            print(e)
+            name = no_value
 
-def get_wine_data(soup: BeautifulSoup, wine_id: int, probability: float) -> dict:
-    wine_types = get_wine_types()
-    try:
-        a_list = soup.find_all('a', {'class': 'anchor_anchor__m8Qi-'})
-        name = soup.find_all('span', {'class': 'vintage'})[0].text.replace('\n', '')
-        wine_type = a_list[3].text
-        country = a_list[0].text
-        winery = a_list[2].text
-        img_path = 'https:' + soup.find_all('img', {'class': 'image'})[0]['src']
-        grapes_list = [str(s) for s in a_list if 'grape' in str(s)][0]
-        matches = re.findall('grape_ids\[]=\d+', grapes_list)
-        grapes = []
-        for match in matches:
-            grapes.append(wine_types[int(re.findall('\d+', match)[0])]['name'])
+        try:
+            region = reviews['reviews'][0]['vintage']['wine']['region']['name']
+        except Exception as e:
+            print(e)
+            region = no_value
 
-        if not soup.find_all('div', {'class': PRICE_CLASS_NAME}):
-            price = 'N.A.'
-        else:
-            price = soup.find_all(
-                'div', {'class': PRICE_CLASS_NAME})[0].text
-        wine_data = {
-            'Id': wine_id,
-            'Probability': probability,
-            'Name': name,
-            'Wine Type': wine_type,
-            'Country': country,
-            'Winery': winery,
-            'Main grapes': ', '.join(grapes),
-            'Image path': img_path,
-            'Price': price,
-            'Match': 0
-        }
-    except Exception as e:
-        raise e
+        try:
+            winery = reviews['reviews'][0]['vintage']['wine']['winery']['name']
+        except Exception as e:
+            print(e)
+            winery = no_value
+    else:
+        name = no_value
+        region = no_value
+        winery = no_value
+
+    if prices['checkout_prices'][0]['availability']['price']:
+        try:
+            price = str(np.round(prices['checkout_prices'][0]['availability']['price']['amount'],decimals=2)) + '€'
+        except Exception as e:
+            print(e)
+            price = no_value
+    elif prices['checkout_prices'][0]['availability']['median']:
+        try:
+            price = str(np.round(prices['checkout_prices'][0]['availability']['median']['amount'], decimals=2)) + '€'
+        except Exception as e:
+            print(e)
+            price = no_value
+    else:
+        price = no_value
+
+    if highlights['highlights'][0]['metadata']['style']:
+        try:
+            wine_type = highlights['highlights'][0]['metadata']['style']['name']
+        except Exception as e:
+            print(e)
+            wine_type = no_value
+
+        try:
+            country = highlights['highlights'][0]['metadata']['style']['country']['name']
+        except Exception as e:
+            print(e)
+            country = no_value
+    else:
+        wine_type = no_value
+        country = no_value
+
+    if highlights['highlights'][0]['metadata']['style']:
+        grape_list = list()
+        try:
+            for i in range(len(highlights['highlights'][0]['metadata']['style']['grapes'])):
+                grape_list.append(highlights['highlights'][0]['metadata']['style']['grapes'][i]['name'])
+            grapes = ', '.join(grape_list)
+        except Exception as e:
+            print(e)
+            grapes = no_value
+    else:
+        grapes = no_value
+
+    wine_data = {
+        'Id': str(wine_id),
+        'Probability': "{0:.0%}".format(probability),
+        'Name': name,
+        'Wine Type': wine_type,
+        'Country': country,
+        'Region': region,
+        'Winery': winery,
+        'Main grapes': grapes,
+        'Image path': 'https:' + html.find_all('img', {'class': 'image'})[0]['src'],
+        'URL': 'https://vivino.com/w/{}'.format(wine_id),
+        'Price': price
+    }
     return wine_data
 
 
 def request_vivino(wine_id: int):
-    initial_response: requests = requests.get(
-        url='https://www.vivino.com/w/{}'.format(wine_id),
+    highlights = requests.get(
+        url='https://www.vivino.com/api/wines/{}/highlights?per_page=1'.format(wine_id),
         headers={
-            'User-Agent': USER_AGENT,
-            'Accept-Language': 'de-DE'
+            'User-Agent': USER_AGENT
         }
     )
-    initial_response.raise_for_status()
-    main_url = initial_response.url
-
-    DRIVER.get(main_url)
-    try:
-        element_present = ec.presence_of_element_located((By.CLASS_NAME, PRICE_CLASS_NAME))
-        WebDriverWait(DRIVER, TIMEOUT).until(element_present)
-    except TimeoutException:
-        print('Timed out waiting for page to load (wine Id:' + str(wine_id) + ')')
-    html_response = DRIVER.page_source
-    return html_response
+    highlights.raise_for_status()
+    reviews = requests.get(
+        url='https://www.vivino.com/api/wines/{}/reviews?per_page=1'.format(wine_id),
+        headers={
+            'User-Agent': USER_AGENT
+        }
+    )
+    prices = requests.get(
+        url='https://www.vivino.com/api/wines/{}/checkout_prices?language=de'.format(wine_id),
+        headers={
+            'User-Agent': USER_AGENT
+        }
+    )
+    prices.raise_for_status()
+    reviews.raise_for_status()
+    html = requests.get(
+        url='https://www.vivino.com/w/{}/'.format(wine_id),
+        headers={
+            'User-Agent': USER_AGENT
+        }
+    )
+    return [highlights, reviews, prices, html]
 
 
 def get_recommendations(query: str, n: int) -> list:
     query_embedding = embedder.encode(query, convert_to_tensor=True)
     similarity_scores = util.cos_sim(query_embedding, embeddings_list)
-    top_results = torch.topk(similarity_scores, k=300)
+    top_results = torch.topk(similarity_scores, k=1400)
     top_similar_wines = [wine_id_list[i] for i in top_results[1][0]]
     recommendations_list: list = list()
     wine_data = dict()
@@ -119,8 +153,13 @@ def get_recommendations(query: str, n: int) -> list:
         top_similar_wines = [i for i in top_similar_wines if i != id_var]
         wine_data[id_var] = probability
     for wine_id in wine_data.keys():
-        soup = BeautifulSoup(request_vivino(wine_id), 'html.parser')
+        data_list: list = request_vivino(wine_id)
+        highlights: json = data_list[0].json()
+        reviews: json = data_list[1].json()
+        prices: json = data_list[2].json()
+        html = BeautifulSoup(data_list[3].text, 'html.parser')
         recommendations_list.append(
-            get_wine_data(soup=soup, wine_id=wine_id, probability=wine_data[wine_id])
+            get_wine_data(highlights=highlights, reviews=reviews, html=html, prices=prices,
+                          wine_id=wine_id, probability=wine_data[wine_id])
         )
     return recommendations_list
