@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def count_corresponding_reviews(args) -> list:
+def count_corresponding_reviews(args) -> pd.DataFrame:
     df_train = args[0]
     df_test = args[1]
     user_ids = args[2]

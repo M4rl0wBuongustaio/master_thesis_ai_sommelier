@@ -10,13 +10,15 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15'
 
-embeddings_dict: dict = torch.load(
-    '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/database/test_embeddings_likes.pt')
+EMBEDDINGS_PATH = '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/database/test_embeddings_likes.pt'
+EMBEDDER_PATH = '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/models/simcse_en'
+
+embeddings_dict: dict = torch.load(EMBEDDINGS_PATH)
 embeddings_list: torch.tensor = torch.stack([embeddings_dict[i][1] for i in range(len(embeddings_dict.values()))])
 wine_id_list: list = [embeddings_dict[i][0] for i in range(len(embeddings_dict.values()))]
+
 del embeddings_dict
-embedder = SentenceTransformer.load(
-    '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/models/simcse_en')
+embedder = SentenceTransformer.load(EMBEDDER_PATH)
 
 
 def get_wine_data(highlights: json, reviews: json, prices: json, html: BeautifulSoup, wine_id: int,
@@ -48,7 +50,7 @@ def get_wine_data(highlights: json, reviews: json, prices: json, html: Beautiful
 
     if prices['checkout_prices'][0]['availability']['price']:
         try:
-            price = str(np.round(prices['checkout_prices'][0]['availability']['price']['amount'],decimals=2)) + '€'
+            price = str(np.round(prices['checkout_prices'][0]['availability']['price']['amount'], decimals=2)) + '€'
         except Exception as e:
             print(e)
             price = no_value

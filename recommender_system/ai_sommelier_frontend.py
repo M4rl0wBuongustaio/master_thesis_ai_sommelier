@@ -4,6 +4,7 @@ import streamlit as st
 import json
 import os
 
+
 interview_queries_path = \
     '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/recommender_system/interview_queries'
 
