@@ -10,7 +10,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15'
 
-EMBEDDINGS_PATH = '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/database/test_embeddings_likes.pt'
+EMBEDDINGS_PATH = '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/database/embeddings_ki-sommelier.pt'
 EMBEDDER_PATH = '/Users/leonbecker/DataspellProjects/master_thesis_ai_sommelier/models/simcse_en'
 
 embeddings_dict: dict = torch.load(EMBEDDINGS_PATH)

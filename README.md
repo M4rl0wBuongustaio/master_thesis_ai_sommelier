@@ -1,6 +1,6 @@
 # AI-Sommelier (Master Thesis)
 
-*AI-Sommelier installation instructions can be found below. (Installation Notes)*
+*AI-Sommelier installation instructions can be found below (Installation Notes).*
 
 ## About this Repository and Research Questions
 
@@ -50,5 +50,5 @@ For using the AI-Sommelier please follow the subsequent steps:
 1. clone this repository
 2. install packages from ```requirements.txt```
 3. download AI-sommelier data <u>and</u> model set as described in the Master Thesis (*Anhang*)
-4. adjust ``EMBEDDING_PATH`` <u>and</u> ``EMBEDDER_PATH`` in ```ai_sommelier_backend.py``` accordingly
+4. adjust ``EMBEDDINGS_PATH`` <u>and</u> ``EMBEDDER_PATH`` in ```ai_sommelier_backend.py``` accordingly
 5. run ```ai_sommelier_frontend.py``` (e. g. from terminal)
